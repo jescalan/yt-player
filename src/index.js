@@ -1,5 +1,5 @@
-const EventEmitter = require('events').EventEmitter
-const loadScript = require('load-script2')
+import EventEmitter from 'events'
+import loadScript from '../node_modules/load-script2'
 
 const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api'
 
@@ -40,34 +40,40 @@ const loadIframeAPICallbacks = []
  * YouTube Player. Exposes a better API, with nicer events.
  * @param {HTMLElement|selector} element
  */
-class YouTubePlayer extends EventEmitter {
-  constructor (element, opts) {
+export default class YouTubePlayer extends EventEmitter {
+  constructor(element, opts) {
     super()
 
-    const elem = typeof element === 'string'
-      ? document.querySelector(element)
-      : element
+    const elem =
+      typeof element === 'string' ? document.querySelector(element) : element
 
     if (elem.id) {
       this._id = elem.id // use existing element id
     } else {
-      this._id = elem.id = 'ytplayer-' + Math.random().toString(16).slice(2, 8)
+      this._id = elem.id =
+        'ytplayer-' +
+        Math.random()
+          .toString(16)
+          .slice(2, 8)
     }
 
-    this._opts = Object.assign({
-      width: 640,
-      height: 360,
-      autoplay: false,
-      captions: undefined,
-      controls: true,
-      keyboard: true,
-      fullscreen: true,
-      annotations: true,
-      modestBranding: false,
-      related: true,
-      info: true,
-      timeupdateFrequency: 1000
-    }, opts)
+    this._opts = Object.assign(
+      {
+        width: 640,
+        height: 360,
+        autoplay: false,
+        captions: undefined,
+        controls: true,
+        keyboard: true,
+        fullscreen: true,
+        annotations: true,
+        modestBranding: false,
+        related: true,
+        info: true,
+        timeupdateFrequency: 1000
+      },
+      opts
+    )
 
     this.videoId = null
     this.destroyed = false
@@ -91,7 +97,8 @@ class YouTubePlayer extends EventEmitter {
     this.on('buffering', this._stopInterval)
 
     this._loadIframeAPI((err, api) => {
-      if (err) return this._destroy(new Error('YouTube Iframe API failed to load'))
+      if (err)
+        return this._destroy(new Error('YouTube Iframe API failed to load'))
       this._api = api
 
       // If load(videoId) was called before Iframe API loaded, ensure it gets
@@ -100,7 +107,7 @@ class YouTubePlayer extends EventEmitter {
     })
   }
 
-  load (videoId, autoplay) {
+  load(videoId, autoplay) {
     if (this.destroyed) return
     if (autoplay == null) autoplay = true
 
@@ -131,69 +138,72 @@ class YouTubePlayer extends EventEmitter {
     }
   }
 
-  play () {
+  play() {
     if (this._ready) this._player.playVideo()
     else this._queueCommand('play')
   }
 
-  pause () {
+  pause() {
     if (this._ready) this._player.pauseVideo()
     else this._queueCommand('pause')
   }
 
-  stop () {
+  stop() {
     if (this._ready) this._player.stopVideo()
     else this._queueCommand('stop')
   }
 
-  seek (seconds) {
+  seek(seconds) {
     if (this._ready) this._player.seekTo(seconds, true)
     else this._queueCommand('seek', seconds)
   }
 
-  setVolume (volume) {
+  setVolume(volume) {
     if (this._ready) this._player.setVolume(volume)
     else this._queueCommand('setVolume', volume)
   }
 
-  setPlaybackRate (rate) {
+  setPlaybackRate(rate) {
     if (this._ready) this._player.setPlaybackRate(rate)
     else this._queueCommand('setPlaybackRate', rate)
   }
 
-  getVolume () {
+  getVolume() {
     return (this._ready && this._player.getVolume()) || 0
   }
 
-  getPlaybackRate () {
+  getPlaybackRate() {
     return (this._ready && this._player.getPlaybackRate()) || 1
   }
 
-  getAvailablePlaybackRates () {
-    return (this._ready && this._player.getAvailablePlaybackRates()) || [ 1 ]
+  getAvailablePlaybackRates() {
+    return (this._ready && this._player.getAvailablePlaybackRates()) || [1]
   }
 
-  getDuration () {
+  getDuration() {
     return (this._ready && this._player.getDuration()) || 0
   }
 
-  getProgress () {
+  getProgress() {
     return (this._ready && this._player.getVideoLoadedFraction()) || 0
   }
 
-  getState () {
-    return (this._ready && YOUTUBE_STATES[this._player.getPlayerState()]) || 'unstarted'
+  getState() {
+    return (
+      (this._ready && YOUTUBE_STATES[this._player.getPlayerState()]) ||
+      'unstarted'
+    )
   }
 
-  getCurrentTime () {
+  getCurrentTime() {
     return (this._ready && this._player.getCurrentTime()) || 0
   }
 
-  destroy () {
+  destroy() {
     this._destroy()
   }
 
-  _destroy (err) {
+  _destroy(err) {
     if (this.destroyed) return
     this.destroyed = true
 
@@ -223,19 +233,19 @@ class YouTubePlayer extends EventEmitter {
     if (err) this.emit('error', err)
   }
 
-  _queueCommand (command, ...args) {
+  _queueCommand(command, ...args) {
     if (this.destroyed) return
     this._queue.push([command, args])
   }
 
-  _flushQueue () {
+  _flushQueue() {
     while (this._queue.length) {
       const command = this._queue.shift()
       this[command[0]].apply(this, command[1])
     }
   }
 
-  _loadIframeAPI (cb) {
+  _loadIframeAPI(cb) {
     // If API is loaded, there is nothing else to do
     if (window.YT && typeof window.YT.Player === 'function') {
       return cb(null, window.YT)
@@ -245,13 +255,15 @@ class YouTubePlayer extends EventEmitter {
     loadIframeAPICallbacks.push(cb)
 
     const scripts = Array.from(document.getElementsByTagName('script'))
-    const isLoading = scripts.some(script => script.src === YOUTUBE_IFRAME_API_SRC)
+    const isLoading = scripts.some(
+      script => script.src === YOUTUBE_IFRAME_API_SRC
+    )
 
     // If API <script> tag is not present in the page, inject it. Ensures that
     // if user includes a hardcoded <script> tag in HTML for performance, another
     // one will not be added
     if (!isLoading) {
-      loadScript(YOUTUBE_IFRAME_API_SRC, (err) => {
+      loadScript(YOUTUBE_IFRAME_API_SRC, err => {
         if (err) {
           while (loadIframeAPICallbacks.length) {
             const loadCb = loadIframeAPICallbacks.shift()
@@ -272,7 +284,7 @@ class YouTubePlayer extends EventEmitter {
     }
   }
 
-  _createPlayer (videoId) {
+  _createPlayer(videoId) {
     if (this.destroyed) return
 
     const opts = this._opts
@@ -290,9 +302,8 @@ class YouTubePlayer extends EventEmitter {
         // Setting the parameter's value to 1 causes closed captions to be shown
         // by default, even if the user has turned captions off. The default
         // behavior is based on user preference.
-        cc_load_policy: opts.captions != null
-          ? opts.captions ? 1 : 0
-          : undefined, // default to not setting this option
+        cc_load_policy:
+          opts.captions != null ? (opts.captions ? 1 : 0) : undefined, // default to not setting this option
 
         // This parameter indicates whether the video player controls are
         // displayed. For IFrame embeds that load a Flash player, it also defines
@@ -370,10 +381,10 @@ class YouTubePlayer extends EventEmitter {
       },
       events: {
         onReady: () => this._onReady(videoId),
-        onStateChange: (data) => this._onStateChange(data),
-        onPlaybackQualityChange: (data) => this._onPlaybackQualityChange(data),
-        onPlaybackRateChange: (data) => this._onPlaybackRateChange(data),
-        onError: (data) => this._onError(data)
+        onStateChange: data => this._onStateChange(data),
+        onPlaybackQualityChange: data => this._onPlaybackQualityChange(data),
+        onPlaybackRateChange: data => this._onPlaybackRateChange(data),
+        onError: data => this._onError(data)
       }
     })
   }
@@ -382,7 +393,7 @@ class YouTubePlayer extends EventEmitter {
    * This event fires when the player has finished loading and is ready to begin
    * receiving API calls.
    */
-  _onReady (videoId) {
+  _onReady(videoId) {
     if (this.destroyed) return
 
     this._ready = true
@@ -401,7 +412,7 @@ class YouTubePlayer extends EventEmitter {
    * Called when the player's state changes. We emit friendly events so the user
    * doesn't need to use YouTube's YT.PlayerState.* event constants.
    */
-  _onStateChange (data) {
+  _onStateChange(data) {
     if (this.destroyed) return
 
     const state = YOUTUBE_STATES[data.data]
@@ -422,7 +433,7 @@ class YouTubePlayer extends EventEmitter {
    * This event fires whenever the video playback quality changes. Possible
    * values are: 'small', 'medium', 'large', 'hd720', 'hd1080', 'highres'.
    */
-  _onPlaybackQualityChange (data) {
+  _onPlaybackQualityChange(data) {
     if (this.destroyed) return
     this.emit('playbackQualityChange', data.data)
   }
@@ -430,7 +441,7 @@ class YouTubePlayer extends EventEmitter {
   /**
    * This event fires whenever the video playback rate changes.
    */
-  _onPlaybackRateChange (data) {
+  _onPlaybackRateChange(data) {
     if (this.destroyed) return
     this.emit('playbackRateChange', data.data)
   }
@@ -438,7 +449,7 @@ class YouTubePlayer extends EventEmitter {
   /**
    * This event fires if an error occurs in the player.
    */
-  _onError (data) {
+  _onError(data) {
     if (this.destroyed) return
 
     const code = data.data
@@ -450,33 +461,38 @@ class YouTubePlayer extends EventEmitter {
     // The remaining error types occur when the YouTube player cannot play the
     // given video. This is not a fatal error. Report it as unplayable so the user
     // has an opportunity to play another video.
-    if (code === YOUTUBE_ERROR.UNPLAYABLE_1 ||
-        code === YOUTUBE_ERROR.UNPLAYABLE_2 ||
-        code === YOUTUBE_ERROR.NOT_FOUND ||
-        code === YOUTUBE_ERROR.INVALID_PARAM) {
+    if (
+      code === YOUTUBE_ERROR.UNPLAYABLE_1 ||
+      code === YOUTUBE_ERROR.UNPLAYABLE_2 ||
+      code === YOUTUBE_ERROR.NOT_FOUND ||
+      code === YOUTUBE_ERROR.INVALID_PARAM
+    ) {
       return this.emit('unplayable', this.videoId)
     }
 
     // Unexpected error, does not match any known type
-    this._destroy(new Error('YouTube Player Error. Unknown error code: ' + code))
+    this._destroy(
+      new Error('YouTube Player Error. Unknown error code: ' + code)
+    )
   }
 
   /**
    * This event fires when the time indicated by the `getCurrentTime()` method
    * has been updated.
    */
-  _onTimeupdate () {
+  _onTimeupdate() {
     this.emit('timeupdate', this.getCurrentTime())
   }
 
-  _startInterval () {
-    this._interval = setInterval(() => this._onTimeupdate(), this._opts.timeupdateFrequency)
+  _startInterval() {
+    this._interval = setInterval(
+      () => this._onTimeupdate(),
+      this._opts.timeupdateFrequency
+    )
   }
 
-  _stopInterval () {
+  _stopInterval() {
     clearInterval(this._interval)
     this._interval = null
   }
 }
-
-module.exports = YouTubePlayer
